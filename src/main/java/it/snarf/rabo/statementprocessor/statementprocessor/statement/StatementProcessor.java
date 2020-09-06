@@ -1,4 +1,4 @@
-package it.snarf.rabo.statementprocessor.statementprocessor.configuration;
+package it.snarf.rabo.statementprocessor.statementprocessor.statement;
 
 import it.snarf.rabo.statementprocessor.statementprocessor.model.CustomerStatement;
 import org.springframework.batch.item.ItemProcessor;

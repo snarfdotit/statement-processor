@@ -1,4 +1,3 @@
-
 # H2
 spring:
   datasource:
@@ -11,3 +10,6 @@ spring:
       enabled: true
   application:
     name: StatementProcessor
+  batch:
+    job:
+      enabled: true
