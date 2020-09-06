@@ -11,7 +11,6 @@ import it.snarf.rabo.statementprocessor.statementprocessor.report.ReportRowMappe
 import it.snarf.rabo.statementprocessor.statementprocessor.report.ValidationQuery;
 import it.snarf.rabo.statementprocessor.statementprocessor.statement.StatementFieldSetMapper;
 import it.snarf.rabo.statementprocessor.statementprocessor.statement.StatementProcessor;
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import javax.sql.DataSource;
@@ -20,6 +19,7 @@ import org.springframework.batch.core.Step;
 import org.springframework.batch.core.configuration.annotation.EnableBatchProcessing;
 import org.springframework.batch.core.configuration.annotation.JobBuilderFactory;
 import org.springframework.batch.core.configuration.annotation.StepBuilderFactory;
+import org.springframework.batch.core.configuration.annotation.StepScope;
 import org.springframework.batch.core.launch.support.RunIdIncrementer;
 import org.springframework.batch.item.database.BeanPropertyItemSqlParameterSourceProvider;
 import org.springframework.batch.item.database.JdbcBatchItemWriter;
@@ -39,6 +39,7 @@ import org.springframework.batch.item.json.builder.JsonFileItemWriterBuilder;
 import org.springframework.batch.item.xml.StaxEventItemReader;
 import org.springframework.batch.item.xml.builder.StaxEventItemReaderBuilder;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
@@ -57,11 +58,35 @@ public class BatchConfiguration {
     public StepBuilderFactory stepBuilderFactory;
 
     @Bean
-    public MultiResourceItemReader<CustomerStatement> csvResourceReader() {
+    public Job importCsvStatementJob(JobListener listener, Step importCsvStep, Step report) {
+        return jobBuilderFactory.get("importCsvStatementJob")
+            .incrementer(new RunIdIncrementer())
+            .listener(listener)
+            .flow(importCsvStep)
+            .next(report)
+            .end()
+            .build();
+    }
+
+    @Bean
+    public Job importXmlStatementJob(JobListener listener, Step importXmlStep, Step report) {
+        return jobBuilderFactory.get("importXmlStatementJob")
+            .incrementer(new RunIdIncrementer())
+            .listener(listener)
+            .flow(importXmlStep)
+            .next(report)
+            .end()
+            .build();
+    }
+
+    @StepScope
+    @Bean
+    public MultiResourceItemReader<CustomerStatement> csvResourceReader(
+        @Value("#{jobParameters['file.input']}") String inputFile) {
         return new MultiResourceItemReaderBuilder<CustomerStatement>()
             .name("csvResourceReader")
             .delegate(cvsReader())
-            .resources(new ClassPathResource("input/records.csv"))
+            .resources(new ClassPathResource(inputFile))
             .build();
     }
 
@@ -78,22 +103,24 @@ public class BatchConfiguration {
                 .build();
     }
 
+    @StepScope
     @Bean
-    public MultiResourceItemReader<CustomerStatement> xmlResourceReader() {
+    public MultiResourceItemReader<CustomerStatement> xmlResourceReader(
+        @Value("#{jobParameters['file.input']}") String inputFile) {
         return new MultiResourceItemReaderBuilder<CustomerStatement>()
             .name("xmlResourceReader")
-            .delegate(xmlReader())
-            .resources(new ClassPathResource("input/records.xml"))
+            .delegate(xmlReader(inputFile))
+            .resources(new ClassPathResource(inputFile))
             .build();
     }
 
-    public StaxEventItemReader<CustomerStatement> xmlReader() {
+    public StaxEventItemReader<CustomerStatement> xmlReader(String inputFile) {
         Jaxb2Marshaller unmarshaller = new Jaxb2Marshaller();
         unmarshaller.setClassesToBeBound(CustomerStatement.class);
 
         return new StaxEventItemReaderBuilder<CustomerStatement>()
             .name("xmlReader")
-            .resource(new ClassPathResource("input/records.xml"))
+            .resource(new ClassPathResource(inputFile))
             .addFragmentRootElements("record")
             .unmarshaller(unmarshaller)
             .build();
@@ -140,32 +167,11 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Job importCsvStatementJob(JobListener listener, Step importCsvStep, Step report) {
-        return jobBuilderFactory.get("importCsvStatementJob")
-                .incrementer(new RunIdIncrementer())
-                .listener(listener)
-                .flow(importCsvStep)
-                .next(report)
-                .end()
-                .build();
-    }
-
-    @Bean
-    public Job importXmlStatementJob(JobListener listener, Step importXmlStep, Step report) {
-        return jobBuilderFactory.get("importXmlStatementJob")
-            .incrementer(new RunIdIncrementer())
-            .listener(listener)
-            .flow(importXmlStep)
-            .next(report)
-            .end()
-            .build();
-    }
-
-    @Bean
-    public Step importCsvStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+    public Step importCsvStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter,
+        MultiResourceItemReader<CustomerStatement> csvResourceReader) {
         return stepBuilderFactory.get("importCsvStep")
                 .<CustomerStatement, CustomerStatement> chunk(5)
-                .reader(csvResourceReader())
+                .reader(csvResourceReader)
                 .processor(csvProcessor())
                 .writer(jdbcWriter)
                 .listener(listener)
@@ -173,10 +179,11 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step importXmlStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+    public Step importXmlStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter,
+        MultiResourceItemReader<CustomerStatement> xmlResourceReader) {
         return stepBuilderFactory.get("importXmlStep")
             .<CustomerStatement, CustomerStatement> chunk(5)
-            .reader(xmlResourceReader())
+            .reader(xmlResourceReader)
             .processor(xmlProcessor())
             .writer(jdbcWriter)
             .listener(listener)
@@ -184,21 +191,23 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step report(ReportStepExecutionListener listener, JdbcCursorItemReader<ErrorStatement> reportReader) throws IOException {
+    public Step report(ReportStepExecutionListener listener, JdbcCursorItemReader<ErrorStatement> reportReader,
+        JsonFileItemWriter<ErrorStatement> errorJsonFileItemWriter) {
         return stepBuilderFactory.get("report")
             .<ErrorStatement, ErrorStatement> chunk(5)
             .reader(reportReader)
             .processor(reportProcessor())
-            .writer(errorJsonFileItemWriter())
+            .writer(errorJsonFileItemWriter)
             .listener(listener)
             .build();
     }
-
+    @StepScope
     @Bean
-    public JsonFileItemWriter<ErrorStatement> errorJsonFileItemWriter() {
-        Path outputFilePath = Paths.get("output", "errors.json");
-        Resource resource = new FileSystemResource(outputFilePath.toFile());
+    public JsonFileItemWriter<ErrorStatement> errorJsonFileItemWriter(
+        @Value("#{jobParameters['file.output']}") String outputFile) {
 
+        Path outputFilePath = Paths.get("output", outputFile);
+        Resource resource = new FileSystemResource(outputFilePath.toFile());
 
         return new JsonFileItemWriterBuilder<ErrorStatement>()
             .jsonObjectMarshaller(new JacksonJsonObjectMarshaller<>())

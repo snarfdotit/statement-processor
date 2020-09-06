@@ -12,4 +12,13 @@ spring:
     name: StatementProcessor
   batch:
     job:
-      enabled: true
+      enabled: false
+file:
+  csv:
+    input: "/input/records.csv"
+    output: "errorsCsv.json"
+  xml:
+    input: "/input/records.xml"
+    output: "errorsXml.json"
+app:
+  clear-db: false
