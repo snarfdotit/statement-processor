@@ -8,12 +8,12 @@ import org.junit.jupiter.api.Test;
 
 class EndBalanceValidatorTest {
 
-    private EndBalanceValidator endBalanceValidator = new EndBalanceValidator();
+    private final EndBalanceValidator endBalanceValidator = new EndBalanceValidator();
 
     @Test
     void isValid() {
         CustomerStatement customerStatement = new CustomerStatement(1L, 1L,"MyIban",
-            "description", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN);
+            "description", BigDecimal.TEN, BigDecimal.ZERO, BigDecimal.TEN, "filename");
 
         assertTrue(endBalanceValidator.isValid(customerStatement, null));
 
@@ -22,7 +22,7 @@ class EndBalanceValidatorTest {
     @Test
     void isNotValid() {
         CustomerStatement customerStatement = new CustomerStatement(1L, 1L,"MyIban",
-            "description", BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN);
+            "description", BigDecimal.TEN, BigDecimal.ONE, BigDecimal.TEN, "filename");
 
         assertFalse(endBalanceValidator.isValid(customerStatement, null));
 

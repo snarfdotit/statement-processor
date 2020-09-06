@@ -11,12 +11,11 @@ public class ReportRowMapper implements RowMapper<ErrorStatement> {
 
     @Override
     public ErrorStatement mapRow(ResultSet rs, int rowNum) throws SQLException {
-        ErrorStatement error = ErrorStatement.builder()
+        return ErrorStatement.builder()
             .referenceNumber(rs.getLong("reference_number"))
             .description(rs.getString("description"))
             .error(rs.getString("error"))
+            .filename(rs.getString("filename"))
             .build();
-
-        return error;
     }
 }

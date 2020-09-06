@@ -14,6 +14,8 @@ import javax.xml.bind.annotation.XmlRootElement;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.batch.item.ResourceAware;
+import org.springframework.core.io.Resource;
 
 @Data
 @AllArgsConstructor
@@ -21,7 +23,7 @@ import lombok.NoArgsConstructor;
 @XmlRootElement(name = "record")
 @Entity
 @XmlAccessorType(XmlAccessType.FIELD)
-public class CustomerStatement {
+public class CustomerStatement implements ResourceAware {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -46,4 +48,12 @@ public class CustomerStatement {
 
     @NotNull
     private BigDecimal endBalance;
+
+    @NotNull
+    private String filename;
+
+    @Override
+    public void setResource(Resource resource) {
+        this.filename = resource.getFilename();
+    }
 }

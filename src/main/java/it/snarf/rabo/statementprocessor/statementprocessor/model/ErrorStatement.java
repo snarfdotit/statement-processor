@@ -10,4 +10,5 @@ public class ErrorStatement {
     private Long referenceNumber;
     private String description;
     private String error;
+    private String filename;
 }

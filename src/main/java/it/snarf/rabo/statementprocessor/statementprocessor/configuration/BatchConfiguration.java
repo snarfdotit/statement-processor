@@ -26,7 +26,9 @@ import org.springframework.batch.item.database.JdbcCursorItemReader;
 import org.springframework.batch.item.database.builder.JdbcBatchItemWriterBuilder;
 import org.springframework.batch.item.file.FlatFileItemReader;
 import org.springframework.batch.item.file.LineMapper;
+import org.springframework.batch.item.file.MultiResourceItemReader;
 import org.springframework.batch.item.file.builder.FlatFileItemReaderBuilder;
+import org.springframework.batch.item.file.builder.MultiResourceItemReaderBuilder;
 import org.springframework.batch.item.file.mapping.BeanWrapperFieldSetMapper;
 import org.springframework.batch.item.file.mapping.DefaultLineMapper;
 import org.springframework.batch.item.file.transform.DelimitedLineTokenizer;
@@ -54,11 +56,18 @@ public class BatchConfiguration {
     public StepBuilderFactory stepBuilderFactory;
 
     @Bean
+    public MultiResourceItemReader<CustomerStatement> csvResourceReader() {
+        return new MultiResourceItemReaderBuilder<CustomerStatement>()
+            .name("csvResourceReader")
+            .delegate(cvsReader())
+            .resources(new ClassPathResource("input/records.csv"))
+            .build();
+    }
+
     public FlatFileItemReader<CustomerStatement> cvsReader() {
         return new FlatFileItemReaderBuilder<CustomerStatement>()
                 .name("statementCsvItemReader")
                 .linesToSkip(1)
-                .resource(new ClassPathResource("input/records.csv"))
                 .delimited()
                 .names("reference","iban", "description", "startBalance", "mutation", "endBalance")
                 .lineMapper(lineMapper())
@@ -69,6 +78,14 @@ public class BatchConfiguration {
     }
 
     @Bean
+    public MultiResourceItemReader<CustomerStatement> xmlResourceReader() {
+        return new MultiResourceItemReaderBuilder<CustomerStatement>()
+            .name("xmlResourceReader")
+            .delegate(xmlReader())
+            .resources(new ClassPathResource("input/records.xml"))
+            .build();
+    }
+
     public StaxEventItemReader<CustomerStatement> xmlReader() {
         Jaxb2Marshaller unmarshaller = new Jaxb2Marshaller();
         unmarshaller.setClassesToBeBound(CustomerStatement.class);
@@ -108,44 +125,46 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public ReportProcessor reportProcessor() { return new ReportProcessor(); }
+    public ReportProcessor reportProcessor() {
+        return new ReportProcessor();
+    }
 
     @Bean
     public JdbcBatchItemWriter<CustomerStatement> jdbcWriter(final DataSource dataSource) {
         return new JdbcBatchItemWriterBuilder<CustomerStatement>()
             .itemSqlParameterSourceProvider(new BeanPropertyItemSqlParameterSourceProvider<>())
-            .sql("INSERT INTO customer_statement (reference_number, iban, description, start_balance, mutation, end_balance) VALUES (:referenceNumber, :iban, :description, :startBalance, :mutation, :endBalance)")
+            .sql("INSERT INTO customer_statement (reference_number, iban, description, start_balance, mutation, end_balance, filename) VALUES (:referenceNumber, :iban, :description, :startBalance, :mutation, :endBalance, :filename)")
             .dataSource(dataSource)
             .build();
     }
 
     @Bean
-    public Job importCsvStatementJob(NotificationListener listener, Step step1, Step report) {
+    public Job importCsvStatementJob(NotificationListener listener, Step importCsvStep, Step report) {
         return jobBuilderFactory.get("importCsvStatementJob")
                 .incrementer(new RunIdIncrementer())
                 .listener(listener)
-                .flow(step1)
+                .flow(importCsvStep)
                 .next(report)
                 .end()
                 .build();
     }
 
     @Bean
-    public Job importXmlStatementJob(NotificationListener listener, Step step2, Step report) {
+    public Job importXmlStatementJob(NotificationListener listener, Step importXmlStep, Step report) {
         return jobBuilderFactory.get("importXmlStatementJob")
             .incrementer(new RunIdIncrementer())
             .listener(listener)
-            .flow(step2)
+            .flow(importXmlStep)
             .next(report)
             .end()
             .build();
     }
 
     @Bean
-    public Step step1(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
-        return stepBuilderFactory.get("step1")
+    public Step importCsvStep(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+        return stepBuilderFactory.get("importCsv")
                 .<CustomerStatement, CustomerStatement> chunk(5)
-                .reader(cvsReader())
+                .reader(csvResourceReader())
                 .processor(csvProcessor())
                 .writer(jdbcWriter)
                 .listener(listener)
@@ -153,10 +172,10 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step step2(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
-        return stepBuilderFactory.get("step2")
+    public Step importXmlStep(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+        return stepBuilderFactory.get("importXml")
             .<CustomerStatement, CustomerStatement> chunk(5)
-            .reader(xmlReader())
+            .reader(xmlResourceReader())
             .processor(xmlProcessor())
             .writer(jdbcWriter)
             .listener(listener)
@@ -175,7 +194,7 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public JsonFileItemWriter<ErrorStatement> errorJsonFileItemWriter() throws IOException {
+    public JsonFileItemWriter<ErrorStatement> errorJsonFileItemWriter() {
         Path outputFilePath = Paths.get("output", "errors.json");
         Resource resource = new FileSystemResource(outputFilePath.toFile());
 

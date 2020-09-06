@@ -7,9 +7,6 @@ public class StatementProcessor implements ItemProcessor<CustomerStatement, Cust
 
     @Override
     public CustomerStatement process(final CustomerStatement customerStatement) {
-
-        final CustomerStatement processedStatement = customerStatement;
-
-        return processedStatement;
+        return customerStatement;
     }
 }
