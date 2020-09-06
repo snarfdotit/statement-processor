@@ -10,12 +10,12 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class NotificationListener extends JobExecutionListenerSupport {
+public class JobListener extends JobExecutionListenerSupport {
 
     private final JdbcTemplate jdbcTemplate;
 
     @Autowired
-    public NotificationListener(final JdbcTemplate jdbcTemplate) {
+    public JobListener(final JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 

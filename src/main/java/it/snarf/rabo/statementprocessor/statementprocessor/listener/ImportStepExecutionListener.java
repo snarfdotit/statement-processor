@@ -8,16 +8,16 @@ import org.springframework.stereotype.Component;
 
 @Slf4j
 @Component
-public class ValidationStepExecutionListener implements StepExecutionListener {
+public class ImportStepExecutionListener implements StepExecutionListener {
 
     @Override
     public void beforeStep(StepExecution stepExecution) {
-        log.info("Starting step execution: {}", stepExecution);
+        log.info("Starting import step execution: {}", stepExecution);
     }
 
     @Override
     public ExitStatus afterStep(StepExecution stepExecution) {
-        log.info("Stopping step execution: {}", stepExecution);
+        log.info("Stopping import step execution: {}", stepExecution);
         return stepExecution.getExitStatus();
     }
 }

@@ -1,7 +1,8 @@
 package it.snarf.rabo.statementprocessor.statementprocessor.configuration;
 
-import it.snarf.rabo.statementprocessor.statementprocessor.listener.NotificationListener;
-import it.snarf.rabo.statementprocessor.statementprocessor.listener.ValidationStepExecutionListener;
+import it.snarf.rabo.statementprocessor.statementprocessor.listener.ImportStepExecutionListener;
+import it.snarf.rabo.statementprocessor.statementprocessor.listener.JobListener;
+import it.snarf.rabo.statementprocessor.statementprocessor.listener.ReportStepExecutionListener;
 import it.snarf.rabo.statementprocessor.statementprocessor.model.CustomerStatement;
 import it.snarf.rabo.statementprocessor.statementprocessor.model.ErrorStatement;
 import it.snarf.rabo.statementprocessor.statementprocessor.report.ReportDataReader;
@@ -139,7 +140,7 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Job importCsvStatementJob(NotificationListener listener, Step importCsvStep, Step report) {
+    public Job importCsvStatementJob(JobListener listener, Step importCsvStep, Step report) {
         return jobBuilderFactory.get("importCsvStatementJob")
                 .incrementer(new RunIdIncrementer())
                 .listener(listener)
@@ -150,7 +151,7 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Job importXmlStatementJob(NotificationListener listener, Step importXmlStep, Step report) {
+    public Job importXmlStatementJob(JobListener listener, Step importXmlStep, Step report) {
         return jobBuilderFactory.get("importXmlStatementJob")
             .incrementer(new RunIdIncrementer())
             .listener(listener)
@@ -161,8 +162,8 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step importCsvStep(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
-        return stepBuilderFactory.get("importCsv")
+    public Step importCsvStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+        return stepBuilderFactory.get("importCsvStep")
                 .<CustomerStatement, CustomerStatement> chunk(5)
                 .reader(csvResourceReader())
                 .processor(csvProcessor())
@@ -172,8 +173,8 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step importXmlStep(ValidationStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
-        return stepBuilderFactory.get("importXml")
+    public Step importXmlStep(ImportStepExecutionListener listener, JdbcBatchItemWriter<CustomerStatement> jdbcWriter) {
+        return stepBuilderFactory.get("importXmlStep")
             .<CustomerStatement, CustomerStatement> chunk(5)
             .reader(xmlResourceReader())
             .processor(xmlProcessor())
@@ -183,7 +184,7 @@ public class BatchConfiguration {
     }
 
     @Bean
-    public Step report(ValidationStepExecutionListener listener, JdbcCursorItemReader<ErrorStatement> reportReader) throws IOException {
+    public Step report(ReportStepExecutionListener listener, JdbcCursorItemReader<ErrorStatement> reportReader) throws IOException {
         return stepBuilderFactory.get("report")
             .<ErrorStatement, ErrorStatement> chunk(5)
             .reader(reportReader)
