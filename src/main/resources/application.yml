@@ -21,4 +21,4 @@ file:
     input: "/input/records.xml"
     output: "errorsXml.json"
 app:
-  clear-db: false
+  clear-db: true
