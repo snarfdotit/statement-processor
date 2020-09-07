@@ -7,7 +7,6 @@ import it.snarf.rabo.statementprocessor.statementprocessor.model.CustomerStateme
 import it.snarf.rabo.statementprocessor.statementprocessor.model.ErrorStatement;
 import it.snarf.rabo.statementprocessor.statementprocessor.report.ReportDataReader;
 import it.snarf.rabo.statementprocessor.statementprocessor.report.ReportProcessor;
-import it.snarf.rabo.statementprocessor.statementprocessor.report.ReportRowMapper;
 import it.snarf.rabo.statementprocessor.statementprocessor.report.ValidationQuery;
 import it.snarf.rabo.statementprocessor.statementprocessor.statement.StatementFieldSetMapper;
 import it.snarf.rabo.statementprocessor.statementprocessor.statement.StatementProcessor;
@@ -49,7 +48,7 @@ import org.springframework.oxm.jaxb.Jaxb2Marshaller;
 
 @Configuration
 @EnableBatchProcessing
-public class BatchConfiguration {
+public class StatementProcessorConfiguration {
 
     @Autowired
     public JobBuilderFactory jobBuilderFactory;
@@ -221,8 +220,6 @@ public class BatchConfiguration {
         ReportDataReader reader = new ReportDataReader(ValidationQuery.DUPLICATE, ValidationQuery.END_BALANCE);
 
         return reader.getBuilder()
-            .name("reportReader")
-            .rowMapper(new ReportRowMapper())
             .dataSource(dataSource)
             .build();
     }

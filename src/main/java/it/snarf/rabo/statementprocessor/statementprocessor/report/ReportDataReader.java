@@ -16,6 +16,8 @@ public class ReportDataReader {
 
     public JdbcCursorItemReaderBuilder<ErrorStatement> getBuilder() {
         return new JdbcCursorItemReaderBuilder<ErrorStatement>()
+            .name("reportReader")
+            .rowMapper(new ReportRowMapper())
             .sql(createQuery());
     }
 
