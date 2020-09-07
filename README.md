@@ -14,7 +14,7 @@ From the root folder:
 ```
 $ mvn clean package spring-boot:repackage
  
-$ java -jar target/statementprocessore-0.0.1-SNAPSHOT.jar  
+$ java -jar target/statementprocessor-0.0.1-SNAPSHOT.jar  
 or  
 $ mvn spring-boot:run
 ```
@@ -38,7 +38,7 @@ app:
 For development purpose, there is the famous H2 Console. Reachable by http://localhost:8080/h2-console
 
 ### Improvements (not yet implemented)
+- Figure out a good way to run Integration tests with multiple Job configurations.
 - Use Nio2 WatchService to trigger jobs based on droppings in a folder.
 - implement docker/docker-compose.
-- Configuration via Env variables.
 - At the moment using native SQL over JPA.
